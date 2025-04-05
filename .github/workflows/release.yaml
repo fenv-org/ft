@@ -51,3 +51,7 @@ jobs:
           prerelease: ${{ steps.get-version.outputs.is-prerelease }}
           target_commitish: release
           token: ${{ github.token }}
+          files: |-
+            ft-template
+            flutter_test.ts
+            install-ft.sh

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+main() {
+  script="https://gist.githubusercontent.com/powdream/d3a22a7dcec5aff811074d343a4b63f4/raw/flutter_test.ts"
+  if [[ "$(is_online)" == "online" ]]; then
+    reload_arg="--reload=$script"
+  else
+    reload_arg=""
+  fi
+  <DENO_EXE_PLACEHOLDER> -A \
+    $reload_arg \
+    "$script" "$@"
+}
+
+is_online() {
+  if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS version
+    if nc -G 1 -z 8.8.8.8 53 &>/dev/null; then
+      echo "online"
+    else
+      echo "offline"
+    fi
+  else
+    # Linux version
+    if nc -w 1 -z 8.8.8.8 53 &>/dev/null; then
+      echo "online"
+    else
+      echo "offline"
+    fi
+  fi
+}
+
+main "$@"

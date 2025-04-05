@@ -1,3 +1,5 @@
+#!/usr/bin/env -S deno run -A
+
 // cSpell:words goldens
 
 import { Command } from "jsr:@cliffy/command@1.0.0-rc.7";
@@ -30,7 +32,10 @@ const command = new Command()
   .option("-g --golden", "Add `--tags golden` to flutter test.")
   .option("--no-golden", "Add `--exclude-tags golden` to flutter test.")
   .option("-p --open", "Open the output file.")
-  .option("-M --melos", "Run tests using melos.")
+  .option(
+    "-A --all",
+    "Run tests for all melos projects. If not melos project, it will run tests in the current directory only.",
+  )
   .option("--debug-parse <file:file>", "Debug parsing test report.");
 
 // Define command options type using typeof command
@@ -39,7 +44,7 @@ type CommandFlags = Awaited<ReturnType<typeof command.parse>>;
 async function main(args: string[]): Promise<void> {
   const flag: CommandFlags = await command.parse(args);
 
-  const { output, debugParse, melos } = flag.options;
+  const { output, debugParse, all } = flag.options;
 
   // Calculate concurrency
   const concurrency = calculateConcurrency({
@@ -51,7 +56,7 @@ async function main(args: string[]): Promise<void> {
   // Check if it's a Melos project
   const isMelos = isMelosProject();
 
-  if (melos) {
+  if (all) {
     if (!isMelos) {
       console.error("This directory is not a Melos project.");
       Deno.exit(1);

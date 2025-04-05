@@ -80,7 +80,7 @@ install_flutter_test() {
   rm -f "$FLUTTER_TEST_HOME/ft"
   temp_file="$(mktemp).ts"
   curl -fsSL "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" -o "$temp_file"
-  q"$DENO_EXE" compile -A "$temp_file" -o "$FLUTTER_TEST_HOME/ft"
+  "$DENO_EXE" compile -A "$temp_file" -o "$FLUTTER_TEST_HOME/ft"
   rm -f "$temp_file"
 
   echo "Flutter Test was installed successfully to $FLUTTER_TEST_HOME/ft"

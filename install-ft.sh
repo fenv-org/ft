@@ -30,9 +30,10 @@ setup_flutter_test_home() {
   if [[ ! -d "$FLUTTER_TEST_HOME" ]]; then
     mkdir -p "$FLUTTER_TEST_HOME"
   fi
-  if [[ -f "$FLUTTER_TEST_HOME/flutter-test" ]]; then
+  FLUTTER_TEST_PATH="$FLUTTER_TEST_HOME/ft"
+  if [[ -f "$FLUTTER_TEST_PATH" ]]; then
     # Remove the old flutter-test script
-    rm -f "$FLUTTER_TEST_HOME/flutter-test"
+    rm -f "$FLUTTER_TEST_PATH"
   fi
 }
 
@@ -77,11 +78,11 @@ install_deno_to_flutter_test_home() {
 install_flutter_test() {
   echo "Installing 'ft' to '$FLUTTER_TEST_HOME'..." >&2
 
-  rm -f "$FLUTTER_TEST_HOME/ft"
-  temp_file="$(mktemp).ts"
+  temp_file="$(mktemp -d)/ft.ts"
   curl -fsSL "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" -o "$temp_file"
-  "$DENO_EXE" compile -A "$temp_file" -o "$FLUTTER_TEST_HOME/ft"
-  rm -f "$temp_file"
+  "$DENO_EXE" compile -Aq "$temp_file"
+  mv "$temp_file" "$FLUTTER_TEST_PATH"
+  rm -rf "$(dirname "$temp_file")"
 
   echo "Flutter Test was installed successfully to $FLUTTER_TEST_HOME/ft"
   echo

@@ -12,7 +12,7 @@ fi
 
 set -euo pipefail
 
-DENO_VERSION=2.2.6
+DENO_VERSION=2.2.8
 DENO_INSTALL_SCRIPT_URL="https://gist.githubusercontent.com/LukeChannings/09d53f5c364391042186518c8598b85e/raw/deno_install.sh"
 
 main() {

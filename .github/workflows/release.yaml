@@ -35,8 +35,8 @@ jobs:
 
       - name: Update template with release URL
         run: |
-          release_url="https://github.com/fenv-org/ft/releases/download/v${{ steps.get-version.outputs.version }}/flutter_test.ts"
-          sed -i '' "s|<TYPESCRIPT_PLACEHOLDER>|$release_url|g" ft-template
+          release_url="https://github.com/fenv-org/ft/releases/download/v${{ steps.get-version.outputs.version }}"
+          sed -i "s|<TYPESCRIPT_PLACEHOLDER>|$release_url|g" ft-template
           git add ft-template
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"

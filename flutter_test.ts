@@ -166,14 +166,21 @@ async function runWithoutMelos(params: {
   const { concurrency, tempOutput, flag } = params;
   const { output, updateGoldens, golden } = flag.options;
 
-  const result = await runFlutterTests({
-    concurrency,
-    tempOutput,
-    output,
-    updateGoldens: !!updateGoldens,
-    golden,
-    additionalArgs: flag.literal,
-  });
+  await $`rm -f ${$.path(tempOutput)} ${$.path(output)}`.noThrow();
+  const flutterArgs = [
+    "test",
+    "-j",
+    `${concurrency}`,
+    `--file-reporter=json:${tempOutput}`,
+    ...(updateGoldens ? ["--update-goldens"] : []),
+    ...(golden === true
+      ? ["--tags", "golden"]
+      : golden === false
+      ? ["--exclude-tags", "golden"]
+      : []),
+    ...flag.literal,
+  ];
+  const result = await $`flutter ${flutterArgs}`.noThrow();
 
   if (!existsSync(tempOutput) && result) {
     console.error("There was no test result");
@@ -276,47 +283,6 @@ function calculateConcurrency(
   } else {
     return Math.ceil((numCores * 2) / 3);
   }
-}
-
-// Run Flutter tests
-type RunFlutterTestsParams = {
-  concurrency: number;
-  tempOutput: string;
-  output: string;
-  updateGoldens: boolean;
-  golden: boolean | undefined;
-  additionalArgs: string[];
-  cwd?: string;
-};
-
-async function runFlutterTests(
-  params: RunFlutterTestsParams,
-): Promise<CommandResult | undefined> {
-  const {
-    concurrency,
-    tempOutput,
-    output,
-    updateGoldens,
-    golden,
-    additionalArgs,
-    cwd,
-  } = params;
-
-  await $`rm -f ${$.path(tempOutput)} ${$.path(output)}`.noThrow();
-  const flutterArgs = [
-    "test",
-    "-j",
-    `${concurrency}`,
-    `--file-reporter=json:${tempOutput}`,
-    ...(updateGoldens ? ["--update-goldens"] : []),
-    ...(golden === true
-      ? ["--tags", "golden"]
-      : golden === false
-      ? ["--exclude-tags", "golden"]
-      : []),
-    ...additionalArgs,
-  ];
-  return await $`flutter ${flutterArgs}`.cwd(cwd ?? Deno.cwd()).noThrow();
 }
 
 // Analyze test results

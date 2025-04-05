@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 main() {
-  script="<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts"
+  script="https://github.com/fenv-org/ft/releases/download/v0.2.0-alpha.1/flutter_test.ts"
   if [[ "$(is_online)" == "online" ]]; then
     reload_arg="--reload=$script"
   else

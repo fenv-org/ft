@@ -79,7 +79,7 @@ install_flutter_test() {
 
   rm -f "$FLUTTER_TEST_HOME/ft"
   temp_file=$(mktemp)
-  curl -fsSL "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" >"$temp_file"
+  curl -fsSL "https://github.com/fenv-org/ft/releases/download/v0.2.0-alpha.7/flutter_test.ts" >"$temp_file"
   "$DENO_EXE" compile -A "$temp_file" -o "$FLUTTER_TEST_HOME/ft"
   rm -f "$temp_file"
 

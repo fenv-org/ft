@@ -80,9 +80,13 @@ async function main(args: string[]): Promise<void> {
   const tempOutput = debugParse ? debugParse : "build/test_report.output";
   let result: CommandResult | undefined;
 
-  if (debugParse || (!melos && !isMelos)) {
+  if (debugParse) {
+    result = await runDebugParse({
+      tempOutput,
+      flag,
+    });
+  } else if (!isMelos) {
     result = await runWithoutMelos({
-      debugParse,
       concurrency,
       tempOutput,
       flag,
@@ -106,27 +110,59 @@ async function main(args: string[]): Promise<void> {
   Deno.exit(result?.code ?? 0);
 }
 
+async function runDebugParse(params: {
+  tempOutput: string;
+  flag: CommandFlags;
+}) {
+  const { tempOutput, flag } = params;
+  const { output } = flag.options;
+  let result: CommandResult | undefined;
+
+  if (!existsSync(tempOutput) && result) {
+    console.error("There was no test result");
+    Deno.exit(result.code);
+  }
+
+  // Analyze test results
+  const { trees, totalDurationInSec } = await analyzeTestResults(tempOutput);
+
+  // Categorize tests
+  const { succeededTests, failedTests, skippedTests } = categorizeTests(
+    trees,
+  );
+
+  // Print test results
+  printTestResults(
+    succeededTests,
+    failedTests,
+    skippedTests,
+    totalDurationInSec,
+  );
+
+  // Generate and save test summary
+  const summary = generateTestSummary(failedTests, skippedTests);
+  saveTestReport(summary, output);
+
+  return result;
+}
+
 // Run tests without Melos
 async function runWithoutMelos(params: {
-  debugParse: string | undefined;
   concurrency: number;
   tempOutput: string;
   flag: CommandFlags;
 }): Promise<CommandResult | undefined> {
-  const { debugParse, concurrency, tempOutput, flag } = params;
+  const { concurrency, tempOutput, flag } = params;
   const { output, updateGoldens, golden } = flag.options;
-  let result: CommandResult | undefined;
 
-  if (debugParse === undefined) {
-    result = await runFlutterTests({
-      concurrency,
-      tempOutput,
-      output,
-      updateGoldens: !!updateGoldens,
-      golden,
-      additionalArgs: flag.literal,
-    });
-  }
+  const result = await runFlutterTests({
+    concurrency,
+    tempOutput,
+    output,
+    updateGoldens: !!updateGoldens,
+    golden,
+    additionalArgs: flag.literal,
+  });
 
   if (!existsSync(tempOutput) && result) {
     console.error("There was no test result");
@@ -163,12 +199,10 @@ async function runWithMelos(params: {
   flag: CommandFlags;
 }): Promise<CommandResult | undefined> {
   const { concurrency, tempOutput, flag } = params;
-  const { output, updateGoldens, golden, melos } = flag.options;
+  const { output, updateGoldens, golden, all } = flag.options;
 
   // Run tests only for selected projects in Melos project
-  const scopeArgs = melos
-    ? []
-    : [`--scope=${(await getCurrentPackage())?.name}`];
+  const scopeArgs = all ? [] : [`--scope=${(await getCurrentPackage())?.name}`];
   const projectsWithTests = await getMelosProjectsWithTests(scopeArgs);
   console.error(
     `Running tests for ${projectsWithTests.length} projects with test directories.`,

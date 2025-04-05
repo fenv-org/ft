@@ -438,7 +438,7 @@ async function melosList(options?: {
   dirExists?: string | string[];
   fileExists?: string | string[];
   dependsOn?: string | string[];
-}): Promise<{ name: string; location: string }[]> {
+}): Promise<{ name: string; location: string; type: MelosProjectType }[]> {
   const { scope, dirExists, fileExists, dependsOn } = options ?? {};
 
   const args: string[] = [];
@@ -460,6 +460,13 @@ async function melosList(options?: {
     Deno.exit(result.code);
   }
   return JSON.parse(result.stdout);
+}
+
+enum MelosProjectType {
+  DART_PACKAGE = 0,
+  FLUTTER_PACKAGE = 1,
+  FLUTTER_PLUGIN = 2,
+  FLUTTER_APP = 3,
 }
 
 type SuiteTree = ElementSuite & {

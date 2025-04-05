@@ -2,32 +2,8 @@
 
 main() {
   script="<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts"
-  if [[ "$(is_online)" == "online" ]]; then
-    reload_arg="--reload=$script"
-  else
-    reload_arg=""
-  fi
   # shellcheck disable=SC2288
-  "<DENO_EXE_PLACEHOLDER>" -A $reload_arg \
-    "$script" "$@"
-}
-
-is_online() {
-  if [[ "$(uname)" == "Darwin" ]]; then
-    # macOS version
-    if nc -G 1 -z 8.8.8.8 53 &>/dev/null; then
-      echo "online"
-    else
-      echo "offline"
-    fi
-  else
-    # Linux version
-    if nc -w 1 -z 8.8.8.8 53 &>/dev/null; then
-      echo "online"
-    else
-      echo "offline"
-    fi
-  fi
+  "<DENO_EXE_PLACEHOLDER>" -A "$script" "$@"
 }
 
 main "$@"

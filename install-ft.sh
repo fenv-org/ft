@@ -77,16 +77,9 @@ install_deno_to_flutter_test_home() {
 install_flutter_test() {
   echo "Installing 'ft' to '$FLUTTER_TEST_HOME'..." >&2
 
-  # shellcheck disable=SC2016
-  echo "
-  const driverTemplateUrl = 'https://github.com/fenv-org/ft/releases/download/v0.2.0-alpha.4/flutter_test.ts';
-  const driverTemplate = await fetch(driverTemplateUrl).then((res) => res.text());
-  const flutterTestHome = '$FLUTTER_TEST_HOME';
-  const flutterTestPath = \`\${flutterTestHome}/ft\`;
-  const denoExePath = Deno.execPath();
-  Deno.writeTextFileSync(flutterTestPath, driverTemplate.replace('<DENO_EXE_PLACEHOLDER>', Deno.execPath()));
-  Deno.chmodSync(flutterTestPath, 0o755);
-" | "$DENO_EXE" run -A -
+  "$DENO_EXE" compile -A \
+    "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" \
+    -o "$FLUTTER_TEST_HOME/ft"
 
   echo "Flutter Test was installed successfully to $FLUTTER_TEST_HOME/ft"
   echo

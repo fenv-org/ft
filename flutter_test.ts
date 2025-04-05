@@ -13,7 +13,7 @@ import os from "node:os";
 // Create command instance
 const command = new Command()
   .name("ft")
-  .version("0.2.0-alpha.4")
+  .version("0.2.0-alpha.5")
   .description("Run flutter tests and generate a report.")
   .usage("[options] -- [flutter test options]")
   .option("--good", "Run tests with 2/3 concurrency.", {

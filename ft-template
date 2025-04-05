@@ -7,7 +7,8 @@ main() {
   else
     reload_arg=""
   fi
-  <DENO_EXE_PLACEHOLDER >-A $reload_arg \
+  # shellcheck disable=SC2288
+  "<DENO_EXE_PLACEHOLDER>" -A $reload_arg \
     "$script" "$@"
 }
 

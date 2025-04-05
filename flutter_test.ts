@@ -15,7 +15,11 @@ const command = new Command()
   .name("ft")
   .version("0.2.0-alpha.13")
   .description("Run flutter tests and generate a report.")
-  .usage("[options] -- [flutter test options]")
+  .usage("[options] -- [rawOptions]")
+  .example(
+    "ft -G -o build/test_report.yaml -- --timeout 60s",
+    "Runs with the good concurrency and timeout 60 seconds.\nThe report will be saved to build/test_report.yaml.",
+  )
   .option("-G --good", "Run tests with 2/3 concurrency. This is default.", {
     conflicts: ["half", "max"],
   })

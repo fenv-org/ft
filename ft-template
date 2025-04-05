@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-main() {
-  script="<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts"
-  # shellcheck disable=SC2288
-  "<DENO_EXE_PLACEHOLDER>" -A "$script" "$@"
-}
-
-main "$@"

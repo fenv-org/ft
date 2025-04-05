@@ -25,14 +25,6 @@ jobs:
             echo "is-prerelease=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Force push main to release branch
-        run: |
-          git push -f origin main:release
-
-      - name: Switch to release branch
-        run: |
-          git switch release
-
       - name: Update template with release URL
         run: |
           release_url="https://github.com/fenv-org/ft/releases/download/v${{ steps.get-version.outputs.version }}"
@@ -49,4 +41,5 @@ jobs:
           generate_release_notes: true
           tag_name: v${{ steps.get-version.outputs.version }}
           prerelease: ${{ steps.get-version.outputs.is-prerelease }}
+          target_commitish: release
           token: ${{ github.token }}

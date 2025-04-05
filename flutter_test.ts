@@ -187,13 +187,8 @@ async function runWithoutMelos(params: {
     Deno.exit(result.code);
   }
 
-  // Analyze test results
   const { trees, totalDurationInSec } = await analyzeTestResults(tempOutput);
-
-  // Categorize tests
-  const { succeededTests, failedTests, skippedTests } = categorizeTests(
-    trees,
-  );
+  const { succeededTests, failedTests, skippedTests } = categorizeTests(trees);
 
   // Print test results
   printTestResults(
@@ -204,8 +199,7 @@ async function runWithoutMelos(params: {
   );
 
   // Generate and save test summary
-  const summary = generateTestSummary(failedTests, skippedTests);
-  saveTestReport(summary, output);
+  saveTestReport(generateTestSummary(failedTests, skippedTests), output);
 
   return result;
 }

@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Get version from flutter_test.ts
         id: get-version
@@ -22,6 +24,14 @@ jobs:
           else
             echo "is-prerelease=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Force push main to release branch
+        run: |
+          git push -f origin main:release
+
+      - name: Switch to release branch
+        run: |
+          git switch release
 
       - name: Update template with release URL
         run: |

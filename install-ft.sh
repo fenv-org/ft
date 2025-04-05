@@ -78,11 +78,13 @@ install_deno_to_flutter_test_home() {
 install_flutter_test() {
   echo "Installing 'ft' to '$FLUTTER_TEST_HOME'..." >&2
 
-  temp_file="$(mktemp -d)/ft.ts"
-  curl -fsSL "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" -o "$temp_file"
-  "$DENO_EXE" compile -Aq "$temp_file"
-  mv "$temp_file" "$FLUTTER_TEST_PATH"
-  rm -rf "$(dirname "$temp_file")"
+  temp_dir="$(mktemp -d)"
+  pushd "$temp_dir" >/dev/null
+  curl -fsSL "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" -o ft.ts
+  "$DENO_EXE" compile -Aq ft.ts
+  mv "ft" "$FLUTTER_TEST_PATH"
+  popd >/dev/null
+  rm -rf "$temp_dir"
 
   echo "Flutter Test was installed successfully to $FLUTTER_TEST_HOME/ft"
   echo

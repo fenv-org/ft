@@ -40,10 +40,8 @@ jobs:
 
       - name: Update placeholder with release URL
         run: |
-          set -x
           release_url="https://github.com/fenv-org/ft/releases/download/v${{ steps.get-version.outputs.version }}"
           sed -i "s|<TYPESCRIPT_PLACEHOLDER>|$release_url|g" install-ft.sh
-          git diff --exit-code install-ft.sh
           git add install-ft.sh
           git commit -m "chore: update placeholder with release URL for v${{ steps.get-version.outputs.version }}"
           git push

@@ -79,7 +79,7 @@ install_flutter_test() {
 
   rm -f "$FLUTTER_TEST_HOME/ft"
   "$DENO_EXE" compile -A \
-    "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" \
+    "https://github.com/fenv-org/ft/releases/download/v0.2.0-alpha.6/flutter_test.ts" \
     -o "$FLUTTER_TEST_HOME/ft"
 
   echo "Flutter Test was installed successfully to $FLUTTER_TEST_HOME/ft"

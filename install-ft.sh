@@ -79,7 +79,7 @@ install_flutter_test() {
 
   # shellcheck disable=SC2016
   echo "
-  const driverTemplateUrl = 'https://gist.githubusercontent.com/powdream/d3a22a7dcec5aff811074d343a4b63f4/raw/ft-template';
+  const driverTemplateUrl = 'https://github.com/fenv-org/ft/releases/download/v0.2.0-alpha.4/flutter_test.ts';
   const driverTemplate = await fetch(driverTemplateUrl).then((res) => res.text());
   const flutterTestHome = '$FLUTTER_TEST_HOME';
   const flutterTestPath = \`\${flutterTestHome}/ft\`;

@@ -74,7 +74,7 @@ async function main(args: string[]): Promise<void> {
 
   if (all && usesMelos) {
     // Get Melos projects that have test directories
-    const projectsWithTests = await getMelosProjectsWithTests([]);
+    const projectsWithTests = await getMelosProjectsWithTests();
     if (projectsWithTests.length === 0) {
       console.error(
         "No projects with test directories found in this Melos project.",
@@ -215,15 +215,21 @@ async function runWithMelos(params: {
 
   // Run tests only for selected projects in Melos project
   const scopeArgs = all ? [] : [`--scope=${(await getCurrentPackage())?.name}`];
-  const projectsWithTests = await getMelosProjectsWithTests(scopeArgs);
+  const projectsWithTests = await getMelosProjectsWithTests();
   console.error(
     `Running tests for ${projectsWithTests.length} projects with test directories.`,
   );
 
   await $`rm -f ${$.path(output)}`.noThrow();
-  await $`melos exec ${scopeArgs} --file-exists=${
-    $.path(tempOutput)
-  } -- 'rm -f ${$.path(tempOutput)}'`.stdout("null").stderr("null").noThrow();
+  let melosArgs = [
+    "exec",
+    ...scopeArgs,
+    `--file-exists=${$.path(tempOutput)}`,
+  ];
+  await $`melos ${melosArgs} -- 'rm -f ${$.path(tempOutput)}'`
+    .stdout("null")
+    .stderr("null")
+    .noThrow();
 
   const rawArgs: string[] = [
     "flutter",
@@ -240,7 +246,7 @@ async function runWithMelos(params: {
     rawArgs.push("--exclude-tags", "golden");
   }
   const rawArgsString = rawArgs.join(" ");
-  const melosArgs = [
+  melosArgs = [
     "exec",
     ...scopeArgs,
     "--dir-exists=test",
@@ -425,6 +431,35 @@ function saveTestReport(summary: any, output: string): void {
     Deno.writeTextFileSync(output, yaml);
     console.error(`Test report is saved to ${output}`);
   }
+}
+
+async function melosList(options?: {
+  scope?: string | string[];
+  dirExists?: string | string[];
+  fileExists?: string | string[];
+  dependsOn?: string | string[];
+}): Promise<{ name: string; location: string }[]> {
+  const { scope, dirExists, fileExists, dependsOn } = options ?? {};
+
+  const args: string[] = [];
+  if (scope) {
+    asArray(scope).forEach((s) => args.push(`--scope=${s}`));
+  }
+  if (dirExists) {
+    asArray(dirExists).forEach((d) => args.push(`--dir-exists=${d}`));
+  }
+  if (fileExists) {
+    asArray(fileExists).forEach((f) => args.push(`--file-exists=${f}`));
+  }
+  if (dependsOn) {
+    asArray(dependsOn).forEach((d) => args.push(`--depends-on=${d}`));
+  }
+
+  const result = await $`melos list --json ${args}`.stdout("piped").noThrow();
+  if (result.code !== 0) {
+    Deno.exit(result.code);
+  }
+  return JSON.parse(result.stdout);
 }
 
 type SuiteTree = ElementSuite & {
@@ -672,14 +707,11 @@ function isMelosProject(): boolean {
 }
 
 // Get Melos projects that have test directories
-async function getMelosProjectsWithTests(scopeArgs: string[]): Promise<
+async function getMelosProjectsWithTests(scope?: string): Promise<
   { name: string; location: string }[]
 > {
   try {
-    // Run melos list command with --dir-exists=test to filter projects with test directories
-    const projects = await $`melos list ${scopeArgs} --dir-exists=test --json`
-      .noThrow()
-      .json() as { name: string; location: string }[];
+    const projects = await melosList({ scope, dirExists: "test" });
     const projectsWithTests: { name: string; location: string }[] = projects
       .map((project) => ({ name: project.name, location: project.location }));
 
@@ -694,15 +726,7 @@ async function getMelosProjectsWithTests(scopeArgs: string[]): Promise<
 async function getCurrentPackage(): Promise<
   { name: string; location: string } | null
 > {
-  const result = await $`melos list --json`.stdout("piped").noThrow();
-  if (result.code !== 0) {
-    Deno.exit(result.code);
-  }
-
-  const projects = JSON.parse(result.stdout) as {
-    name: string;
-    location: string;
-  }[];
+  const projects = await melosList();
   const currentDir = Deno.cwd();
   let longestMatch: { name: string; location: string; length: number } | null =
     null;
@@ -722,6 +746,10 @@ async function getCurrentPackage(): Promise<
   return longestMatch
     ? { name: longestMatch.name, location: longestMatch.location }
     : null;
+}
+
+function asArray<T>(value: T | T[]): T[] {
+  return Array.isArray(value) ? value : [value];
 }
 
 if (import.meta.main) {

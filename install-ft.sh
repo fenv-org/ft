@@ -79,7 +79,7 @@ install_flutter_test() {
   echo "Installing 'ft' to '$FLUTTER_TEST_HOME'..." >&2
 
   temp_file="$(mktemp -d)/ft.ts"
-  curl -fsSL "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" -o "$temp_file"
+  curl -fsSL "https://github.com/fenv-org/ft/releases/download/v0.2.0-alpha.11/flutter_test.ts" -o "$temp_file"
   "$DENO_EXE" compile -Aq "$temp_file"
   mv "$temp_file" "$FLUTTER_TEST_PATH"
   rm -rf "$(dirname "$temp_file")"

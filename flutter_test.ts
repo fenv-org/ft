@@ -13,12 +13,20 @@ import os from "node:os";
 // Create command instance
 const command = new Command()
   .name("ft")
-  .version("0.2.0-alpha.13")
+  .version("0.2.0")
   .description("Run flutter tests and generate a report.")
   .usage("[options] -- [rawOptions]")
   .example(
     "ft -G -o build/test_report.yaml -- --timeout 60s",
     "Runs with the good concurrency and timeout 60 seconds.\nThe report will be saved to build/test_report.yaml.",
+  )
+  .example(
+    "ft -AMp",
+    "Runs with the maximum concurrency for all projects and open the report if failed or skipped.",
+  )
+  .example(
+    "ft -ug -- /test/path/to/flutter_test.dart",
+    "Runs with `--tags golden --update-goldens` for the specific test file.",
   )
   .option("-G --good", "Run tests with 2/3 concurrency. This is default.", {
     conflicts: ["half", "max"],
@@ -257,7 +265,44 @@ async function runWithMelos(params: {
     rawArgsString,
   ];
 
-  return await $`melos ${melosArgs}`.noThrow();
+  const testResult = await $`melos ${melosArgs}`.noThrow();
+  let mergedTotalDurationInSec = 0;
+  const mergedSucceededTests: TestTree[] = [];
+  const mergedFailedTests: TestTree[] = [];
+  const mergedSkippedTests: TestTree[] = [];
+
+  const projects = await melosList({
+    scope: scopeArgs,
+    fileExists: tempOutput,
+  });
+  for (const project of projects) {
+    const { trees, totalDurationInSec } = await analyzeTestResults(
+      join(project.location, tempOutput),
+    );
+    const { succeededTests, failedTests, skippedTests } = categorizeTests(
+      trees,
+    );
+    mergedTotalDurationInSec += totalDurationInSec;
+    mergedSucceededTests.push(...succeededTests);
+    mergedFailedTests.push(...failedTests);
+    mergedSkippedTests.push(...skippedTests);
+  }
+
+  // Print test results
+  printTestResults(
+    mergedSucceededTests,
+    mergedFailedTests,
+    mergedSkippedTests,
+    mergedTotalDurationInSec,
+  );
+
+  // Generate and save test summary
+  saveTestReport(
+    generateTestSummary(mergedFailedTests, mergedSkippedTests),
+    output,
+  );
+
+  return testResult;
 }
 
 // Utility functions

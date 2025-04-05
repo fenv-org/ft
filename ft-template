@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
 main() {
-  script="https://gist.githubusercontent.com/powdream/d3a22a7dcec5aff811074d343a4b63f4/raw/flutter_test.ts"
+  script="<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts"
   if [[ "$(is_online)" == "online" ]]; then
     reload_arg="--reload=$script"
   else
     reload_arg=""
   fi
-  <DENO_EXE_PLACEHOLDER> -A \
-    $reload_arg \
+  <DENO_EXE_PLACEHOLDER >-A $reload_arg \
     "$script" "$@"
 }
 

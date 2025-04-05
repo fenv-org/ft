@@ -16,14 +16,14 @@ const command = new Command()
   .version("0.2.0-alpha.13")
   .description("Run flutter tests and generate a report.")
   .usage("[options] -- [flutter test options]")
-  .option("--good", "Run tests with 2/3 concurrency.", {
-    default: true,
+  .option("-G --good", "Run tests with 2/3 concurrency. This is default.", {
+    conflicts: ["half", "max"],
   })
-  .option("-m --max", "Run tests with maximum concurrency.", {
-    conflicts: ["--half", "--good"],
+  .option("-M --max", "Run tests with maximum concurrency.", {
+    conflicts: ["half", "good"],
   })
-  .option("--half", "Run tests with half concurrency.", {
-    conflicts: ["--max", "--good"],
+  .option("-H --half", "Run tests with half concurrency.", {
+    conflicts: ["max", "good"],
   })
   .option("-o --output <file:file>", "Output file.", {
     default: "build/test_report.yaml",
@@ -35,6 +35,12 @@ const command = new Command()
   .option(
     "-A --all",
     "Run tests for all melos projects. If not melos project, it will run tests in the current directory only.",
+    { conflicts: ["no-melos"] },
+  )
+  .option(
+    "--no-melos",
+    "Run tests in the current directory without melos.",
+    { conflicts: ["all"] },
   )
   .option("--debug-parse <file:file>", "Debug parsing test report.");
 
@@ -50,6 +56,7 @@ async function main(args: string[]): Promise<void> {
   const concurrency = calculateConcurrency({
     max: flag.options.max,
     half: flag.options.half,
+    good: flag.options.good,
   });
   console.error(`Run with ${concurrency} concurrency.`);
 
@@ -255,7 +262,7 @@ function featureFile(fileUrl: string) {
 
 // Calculate concurrency based on options
 function calculateConcurrency(
-  options: { max?: boolean; half?: boolean },
+  options: { max?: boolean; half?: boolean; good?: boolean },
 ): number {
   const numCores = os.availableParallelism();
   if (options.max) {

@@ -707,7 +707,7 @@ function isMelosProject(): boolean {
 }
 
 // Get Melos projects that have test directories
-async function getMelosProjectsWithTests(scope?: string): Promise<
+async function getMelosProjectsWithTests(scope?: string | string[]): Promise<
   { name: string; location: string }[]
 > {
   try {

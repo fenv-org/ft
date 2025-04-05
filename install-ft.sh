@@ -77,6 +77,7 @@ install_deno_to_flutter_test_home() {
 install_flutter_test() {
   echo "Installing 'ft' to '$FLUTTER_TEST_HOME'..." >&2
 
+  rm -f "$FLUTTER_TEST_HOME/ft"
   "$DENO_EXE" compile -A \
     "<TYPESCRIPT_PLACEHOLDER>/flutter_test.ts" \
     -o "$FLUTTER_TEST_HOME/ft"

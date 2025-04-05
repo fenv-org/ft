@@ -38,20 +38,12 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-      - name: Update template with release URL
+      - name: Update placeholder with release URL
         run: |
           release_url="https://github.com/fenv-org/ft/releases/download/v${{ steps.get-version.outputs.version }}"
-          sed -i "s|<TYPESCRIPT_PLACEHOLDER>|$release_url|g" ft-template
-          git add ft-template
-          git commit -m "chore: update template with release URL for v${{ steps.get-version.outputs.version }}"
-          git push
-
-      - name: Update install-ft.sh with release URL
-        run: |
-          release_url="https://github.com/fenv-org/ft/releases/download/v${{ steps.get-version.outputs.version }}/ft-template"
-          sed -i "s|const driverTemplateUrl = '.*'|const driverTemplateUrl = '$release_url'|g" install-ft.sh
+          sed -i "s|<TYPESCRIPT_PLACEHOLDER>|$release_url|g" install-ft.sh
           git add install-ft.sh
-          git commit -m "chore: update install-ft.sh with release URL for v${{ steps.get-version.outputs.version }}"
+          git commit -m "chore: update placeholder with release URL for v${{ steps.get-version.outputs.version }}"
           git push
 
       - name: Create Release
@@ -63,6 +55,5 @@ jobs:
           target_commitish: release
           token: ${{ github.token }}
           files: |-
-            ft-template
             flutter_test.ts
             install-ft.sh

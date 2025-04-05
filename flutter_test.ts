@@ -13,7 +13,7 @@ import os from "node:os";
 // Create command instance
 const command = new Command()
   .name("ft")
-  .version("0.2.0")
+  .version("0.3.0-snapshot")
   .description("Run flutter tests and generate a report.")
   .usage("[options] -- [rawOptions]")
   .example(

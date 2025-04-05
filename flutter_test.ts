@@ -42,6 +42,11 @@ const command = new Command()
     { conflicts: ["no-melos"] },
   )
   .option(
+    "--melos",
+    "Run tests with `melos exec`. If not melos project, it works like `--no-melos`.",
+    { default: true },
+  )
+  .option(
     "--no-melos",
     "Run tests in the current directory without melos.",
     { conflicts: ["all"] },
@@ -54,7 +59,7 @@ type CommandFlags = Awaited<ReturnType<typeof command.parse>>;
 async function main(args: string[]): Promise<void> {
   const flag: CommandFlags = await command.parse(args);
 
-  const { output, debugParse, all } = flag.options;
+  const { output, debugParse, all, melos } = flag.options;
 
   // Calculate concurrency
   const concurrency = calculateConcurrency({
@@ -65,14 +70,9 @@ async function main(args: string[]): Promise<void> {
   console.error(`Run with ${concurrency} concurrency.`);
 
   // Check if it's a Melos project
-  const isMelos = isMelosProject();
+  const usesMelos = isMelosProject() && melos;
 
-  if (all) {
-    if (!isMelos) {
-      console.error("This directory is not a Melos project.");
-      Deno.exit(1);
-    }
-
+  if (all && usesMelos) {
     // Get Melos projects that have test directories
     const projectsWithTests = await getMelosProjectsWithTests([]);
     if (projectsWithTests.length === 0) {
@@ -96,7 +96,7 @@ async function main(args: string[]): Promise<void> {
       tempOutput,
       flag,
     });
-  } else if (!isMelos) {
+  } else if (!usesMelos) {
     result = await runWithoutMelos({
       concurrency,
       tempOutput,

@@ -1,5 +1,3 @@
-#!/usr/bin/env -S deno run -A
-
 // cSpell:words goldens
 
 import { Command } from "jsr:@cliffy/command@1.0.0-rc.7";
@@ -13,7 +11,7 @@ import os from "node:os";
 // Create command instance
 const command = new Command()
   .name("ft")
-  .version("0.2.0-alpha.7")
+  .version("0.2.0-alpha.8")
   .description("Run flutter tests and generate a report.")
   .usage("[options] -- [flutter test options]")
   .option("--good", "Run tests with 2/3 concurrency.", {

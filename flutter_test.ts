@@ -13,7 +13,7 @@ import os from "node:os";
 // Create command instance
 const command = new Command()
   .name("ft")
-  .version("0.2.0")
+  .version("0.2.1")
   .description("Run flutter tests and generate a report.")
   .usage("[options] -- [rawOptions]")
   .example(
@@ -52,7 +52,7 @@ const command = new Command()
   .option(
     "--melos",
     "Run tests with `melos exec`. If not melos project, it works like `--no-melos`.",
-    { default: true },
+    { default: false },
   )
   .option(
     "--no-melos",

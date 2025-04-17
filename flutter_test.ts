@@ -4,9 +4,9 @@
 
 import { Command } from "jsr:@cliffy/command@1.0.0-rc.7";
 import $, { CommandResult } from "jsr:@david/dax@0.42.0";
+import * as parser from "jsr:@fenv-org/flutter-test-output-parser@1.0.1";
 import { existsSync } from "jsr:@std/fs@^1.0.4";
 import { dirname, join } from "jsr:@std/path@^1.0.0";
-import { TextLineStream } from "jsr:@std/streams@^1.0.9";
 import { stringify } from "jsr:@std/yaml@^1.0.5";
 import os from "node:os";
 
@@ -52,14 +52,13 @@ const command = new Command()
   .option(
     "--melos",
     "Run tests with `melos exec`. If not melos project, it works like `--no-melos`.",
-    { default: true },
+    { default: false },
   )
   .option(
     "--no-melos",
     "Run tests in the current directory without melos.",
     { conflicts: ["all"] },
-  )
-  .option("--debug-parse <file:file>", "Debug parsing test report.");
+  );
 
 // Define command options type using typeof command
 type CommandFlags = Awaited<ReturnType<typeof command.parse>>;
@@ -67,7 +66,7 @@ type CommandFlags = Awaited<ReturnType<typeof command.parse>>;
 async function main(args: string[]): Promise<void> {
   const flag: CommandFlags = await command.parse(args);
 
-  const { output, debugParse, all, melos } = flag.options;
+  const { output, all, melos } = flag.options;
 
   // Calculate concurrency
   const concurrency = calculateConcurrency({
@@ -96,15 +95,10 @@ async function main(args: string[]): Promise<void> {
   }
 
   // Run tests
-  const tempOutput = debugParse ? debugParse : "build/test_report.output";
+  const tempOutput = "build/test_report.output";
   let result: CommandResult | undefined;
 
-  if (debugParse) {
-    result = await runDebugParse({
-      tempOutput,
-      flag,
-    });
-  } else if (!usesMelos) {
+  if (!usesMelos) {
     result = await runWithoutMelos({
       concurrency,
       tempOutput,
@@ -127,42 +121,6 @@ async function main(args: string[]): Promise<void> {
   }
 
   Deno.exit(result?.code ?? 0);
-}
-
-async function runDebugParse(params: {
-  tempOutput: string;
-  flag: CommandFlags;
-}) {
-  const { tempOutput, flag } = params;
-  const { output } = flag.options;
-  let result: CommandResult | undefined;
-
-  if (!existsSync(tempOutput) && result) {
-    console.error("There was no test result");
-    Deno.exit(result.code);
-  }
-
-  // Analyze test results
-  const { trees, totalDurationInSec } = await analyzeTestResults(tempOutput);
-
-  // Categorize tests
-  const { succeededTests, failedTests, skippedTests } = categorizeTests(
-    trees,
-  );
-
-  // Print test results
-  printTestResults(
-    succeededTests,
-    failedTests,
-    skippedTests,
-    totalDurationInSec,
-  );
-
-  // Generate and save test summary
-  const summary = generateTestSummary(failedTests, skippedTests);
-  saveTestReport(summary, output);
-
-  return result;
 }
 
 // Run tests without Melos
@@ -195,7 +153,9 @@ async function runWithoutMelos(params: {
     Deno.exit(result.code);
   }
 
-  const { trees, totalDurationInSec } = await analyzeTestResults(tempOutput);
+  const { trees, totalDurationInSeconds } = await analyzeTestResults(
+    tempOutput,
+  );
   const { succeededTests, failedTests, skippedTests } = categorizeTests(trees);
 
   // Print test results
@@ -203,7 +163,7 @@ async function runWithoutMelos(params: {
     succeededTests,
     failedTests,
     skippedTests,
-    totalDurationInSec,
+    totalDurationInSeconds,
   );
 
   // Generate and save test summary
@@ -267,22 +227,22 @@ async function runWithMelos(params: {
 
   const testResult = await $`melos ${melosArgs}`.noThrow();
   let mergedTotalDurationInSec = 0;
-  const mergedSucceededTests: TestTree[] = [];
-  const mergedFailedTests: TestTree[] = [];
-  const mergedSkippedTests: TestTree[] = [];
+  const mergedSucceededTests: parser.TestTree[] = [];
+  const mergedFailedTests: parser.TestTree[] = [];
+  const mergedSkippedTests: parser.TestTree[] = [];
 
   const projects = await melosList({
     scope: scopeArgs,
     fileExists: tempOutput,
   });
   for (const project of projects) {
-    const { trees, totalDurationInSec } = await analyzeTestResults(
+    const { trees, totalDurationInSeconds } = await analyzeTestResults(
       join(project.location, tempOutput),
     );
     const { succeededTests, failedTests, skippedTests } = categorizeTests(
       trees,
     );
-    mergedTotalDurationInSec += totalDurationInSec;
+    mergedTotalDurationInSec += totalDurationInSeconds;
     mergedSucceededTests.push(...succeededTests);
     mergedFailedTests.push(...failedTests);
     mergedSkippedTests.push(...skippedTests);
@@ -331,36 +291,23 @@ function calculateConcurrency(
 }
 
 // Analyze test results
-async function analyzeTestResults(
+function analyzeTestResults(
   tempOutput: string,
-): Promise<{
-  trees: Map<number, SuiteTree | GroupTree | TestTree>;
-  totalDurationInSec: number;
-}> {
-  const trees = new Map<number, SuiteTree | GroupTree | TestTree>();
-  let totalDurationInSec = -1;
-
-  for await (const element of readElements(tempOutput)) {
-    buildTree(trees, element);
-    if (element.type === "done") {
-      totalDurationInSec = element.time / 1000;
-    }
-  }
-
-  return { trees, totalDurationInSec };
+): Promise<parser.FlutterTestOutput> {
+  return parser.parseAsync(tempOutput);
 }
 
 // Categorize tests
 function categorizeTests(
-  trees: Map<number, SuiteTree | GroupTree | TestTree>,
+  trees: parser.FlutterTestOutput["trees"],
 ): {
-  succeededTests: TestTree[];
-  failedTests: TestTree[];
-  skippedTests: TestTree[];
+  succeededTests: parser.TestTree[];
+  failedTests: parser.TestTree[];
+  skippedTests: parser.TestTree[];
 } {
-  const succeededTests: TestTree[] = [];
-  const failedTests: TestTree[] = [];
-  const skippedTests: TestTree[] = [];
+  const succeededTests: parser.TestTree[] = [];
+  const failedTests: parser.TestTree[] = [];
+  const skippedTests: parser.TestTree[] = [];
 
   for (const tree of trees.values()) {
     if (tree.type === "testStart") {
@@ -404,8 +351,8 @@ type TestSummary = {
 };
 
 function generateTestSummary(
-  failedTests: TestTree[],
-  skippedTests: TestTree[],
+  failedTests: parser.TestTree[],
+  skippedTests: parser.TestTree[],
 ): TestSummary {
   const summary: TestSummary = {
     failedTestCount: failedTests.length,
@@ -447,10 +394,10 @@ function generateTestSummary(
 
 // Print test results
 function printTestResults(
-  succeededTests: TestTree[],
-  failedTests: TestTree[],
-  skippedTests: TestTree[],
-  totalDurationInSec: number,
+  succeededTests: parser.TestTree[],
+  failedTests: parser.TestTree[],
+  skippedTests: parser.TestTree[],
+  totalDurationInSeconds: number,
 ): void {
   console.error(
     `All tests: ${
@@ -461,8 +408,8 @@ function printTestResults(
   console.error(`Failed tests: ${failedTests.length}`);
   console.error(`Skipped tests: ${skippedTests.length}`);
   console.error(
-    `Total duration: ${Math.floor(totalDurationInSec / 60)} mins ` +
-      `${Math.floor(totalDurationInSec % 60)} sec`,
+    `Total duration: ${Math.floor(totalDurationInSeconds / 60)} mins ` +
+      `${Math.floor(totalDurationInSeconds % 60)} sec`,
   );
 }
 
@@ -512,235 +459,6 @@ enum MelosProjectType {
   FLUTTER_PACKAGE = 1,
   FLUTTER_PLUGIN = 2,
   FLUTTER_APP = 3,
-}
-
-type SuiteTree = ElementSuite & {
-  children: (GroupTree | TestTree)[];
-};
-
-type GroupTree = ElementGroup & {
-  parent?: GroupTree | SuiteTree;
-  children: (GroupTree | TestTree)[];
-};
-
-type TestTree = ElementTestStart & {
-  suite: SuiteTree;
-  parent: GroupTree[];
-  done?: ElementTestDone;
-  print?: ElementPrint[];
-  error?: ElementError[];
-};
-
-function buildTree(
-  trees: Map<number, SuiteTree | GroupTree | TestTree>,
-  element: Element,
-) {
-  switch (element.type) {
-    case "start":
-      break;
-
-    case "suite": {
-      const suiteTree: SuiteTree = {
-        ...element,
-        children: [],
-      };
-      trees.set(element.suite.id, suiteTree);
-      break;
-    }
-
-    case "group": {
-      const groupTree: GroupTree = {
-        ...element,
-        children: [],
-      };
-      trees.set(element.group.id, groupTree);
-      if (element.group.parentID) {
-        const parent = trees.get(element.group.parentID);
-        if (parent?.type === "suite" || parent?.type === "group") {
-          groupTree.parent = parent;
-          parent.children.push(groupTree);
-        }
-      } else {
-        const parent = trees.get(element.group.suiteID);
-        if (parent?.type === "suite") {
-          groupTree.parent = parent;
-          parent.children.push(groupTree);
-        }
-      }
-      break;
-    }
-
-    case "testStart": {
-      const testTree: TestTree = {
-        ...element,
-        suite: trees.get(element.test.suiteID) as SuiteTree,
-        parent: [],
-      };
-      trees.set(element.test.id, testTree);
-      for (const groupID of element.test.groupIDs) {
-        const group = trees.get(groupID);
-        if (group?.type === "group") {
-          testTree.parent.push(group);
-        }
-      }
-      break;
-    }
-
-    case "testDone": {
-      const testCandidate = trees.get(element.testID);
-      if (testCandidate?.type === "testStart") {
-        testCandidate.done = element;
-      }
-      break;
-    }
-
-    case "print": {
-      const testCandidate = trees.get(element.testID);
-      if (testCandidate?.type === "testStart") {
-        testCandidate.print = testCandidate.print || [];
-        testCandidate.print.push(element);
-      }
-      break;
-    }
-
-    case "error": {
-      const testCandidate = trees.get(element.testID);
-      if (testCandidate?.type === "testStart") {
-        testCandidate.error = testCandidate.error
-          ? [...testCandidate.error, element]
-          : [element];
-      }
-      break;
-    }
-
-    case "allSuites":
-      break;
-  }
-}
-
-type Element =
-  | ElementStart
-  | ElementSuite
-  | ElementTest
-  | ElementGroup
-  | ElementTestStart
-  | ElementPrint
-  | ElementTestDone
-  | ElementAllSuites
-  | ElementError
-  | ElementDone;
-
-type ElementStart = {
-  type: "start";
-  protocolVersion: string;
-  runnerVersion: string;
-  pid: number;
-  time: number;
-};
-
-type ElementSuite = {
-  type: "suite";
-  suite: {
-    id: number;
-    platform: string;
-    path: string;
-  };
-  time: number;
-};
-
-type ElementTestStart = {
-  type: "testStart";
-  test: {
-    id: number;
-    name: string;
-    suiteID: number;
-    groupIDs: number[];
-    metadata: {
-      skip: boolean;
-      skipReason: null | string;
-    };
-    line: number | null;
-    column: number | null;
-    url: string | null;
-    root_line?: number;
-    root_column?: number;
-    root_url?: string;
-  };
-  time: number;
-};
-
-type ElementAllSuites = {
-  type: "allSuites";
-  count: number;
-  time: number;
-};
-
-type ElementTestDone = {
-  type: "testDone";
-  testID: number;
-  result: "success" | "error" | "failure";
-  skipped: boolean;
-  hidden: boolean;
-  time: number;
-};
-
-type ElementGroup = {
-  type: "group";
-  group: {
-    id: number;
-    suiteID: number;
-    parentID: number | null;
-    name: string;
-    metadata: {
-      skip: boolean;
-      skipReason: null | string;
-    };
-    testCount: number;
-    line: number | null;
-    column: number | null;
-    url: string | null;
-  };
-  time: number;
-};
-
-type ElementPrint = {
-  type: "print";
-  testID: number;
-  messageType: "print";
-  message: string;
-  time: number;
-};
-
-type ElementTest = {
-  type: "test";
-  error?: string;
-  stackTrace?: string;
-  isFailure?: boolean;
-};
-
-type ElementError = {
-  type: "error";
-  testID: number;
-  error: string;
-  stackTrace: string;
-  isFailure: boolean;
-  time: number;
-};
-
-type ElementDone = {
-  type: "done";
-  success: boolean;
-  time: number;
-};
-
-async function* readElements(filepath: string): AsyncGenerator<Element> {
-  const file = await Deno.open(filepath);
-  for await (
-    const line of file.readable.pipeThrough(new TextDecoderStream())
-      .pipeThrough(new TextLineStream())
-  ) {
-    yield JSON.parse(line);
-  }
 }
 
 function isMelosProject(): boolean {
